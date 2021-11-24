@@ -3,6 +3,6 @@ Packages:
   - Version: 1.0.0
     RequiredApiVersion: 6.0.0
     ReleaseDate: 2021-11-23
-    PackageUrl: https://github.com/azuravian/playnite-LocalInstallButton/releases/download/1.0/InstallButton_fd5887bb-2da2-4044-bea3-9896aea2f5b8_1_0.pext
+    PackageUrl: https://github.com/azuravian/playnite-LocalInstallButton/releases/download/1.0.0/InstallButton_fd5887bb-2da2-4044-bea3-9896aea2f5b8_1_0_0.pext
     Changelog:
       - Initial Release

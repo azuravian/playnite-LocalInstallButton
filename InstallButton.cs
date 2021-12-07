@@ -1,22 +1,21 @@
-﻿using Playnite.SDK;
-using Playnite.SDK.Models;
+﻿using Playnite;
+using Playnite.SDK;
 using Playnite.SDK.Plugins;
-using Playnite.SDK.Controls;
-using Playnite.SDK.Data;
-using Playnite.SDK.Events;
-using Playnite.SDK.Exceptions;
+using Playnite.SDK.Models;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
+using InstallButton;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
-using System.IO;
 using System.Management.Automation;
 using System.Management;
-using System.Diagnostics;
 
 namespace InstallButton
 {
@@ -60,6 +59,18 @@ namespace InstallButton
             };
         }
 
+        public override IEnumerable<InstallController> GetInstallActions(GetInstallActionsArgs args)
+        {
+            string PluginIdTest = new string(args.Game.PluginId.ToString().Take(8).ToArray());
+            if (PluginIdTest != "00000000")
+            {
+                yield break;
+            }
+
+            yield return new LocalInstallController(args.Game);
+        }
+
+
         public void GameInstaller()
         {
             IEnumerable<Game> selection = PlayniteApi.MainView.SelectedGames;
@@ -71,7 +82,6 @@ namespace InstallButton
             string setupFile = null;
             string driveLetter = null;
 
-
             if (selection.Count() > 1)
             {
                 PlayniteApi.Dialogs.ShowErrorMessage("Only one game can be installed at a time.", "Too Many Games Selected");
@@ -79,6 +89,7 @@ namespace InstallButton
             }
             List<Game> gameList = selection.ToList();
             Game selectedGame = gameList[0];
+            
             string PluginIdTest = new string(selectedGame.PluginId.ToString().Take(8).ToArray());
             
             if (PluginIdTest != "00000000")
@@ -259,6 +270,65 @@ namespace InstallButton
                 selectedGame.InstallDirectory = Path.GetDirectoryName(gameExe);
                 PlayniteApi.Database.Games.Update(selectedGame);
             }
+        }
+    }
+
+    public class LocalInstallController : InstallController
+    {
+        private CancellationTokenSource watcherToken;
+
+        public LocalInstallController(Game game) : base(game)
+        {
+            Name = "Install using InstallButton Plugin";
+        }
+
+        public IPlayniteAPI Api;
+
+        public override void Install(InstallActionArgs args)
+        {
+            Dispose();
+
+            InstallButton installButton = new InstallButton(Api);
+            installButton.GameInstaller();
+
+            IEnumerable<Game> selection = Api.MainView.SelectedGames;
+            List<Game> gameList = selection.ToList();
+            Game selectedGame = gameList[0];
+
+            StartInstallWatcher(selectedGame);
+        }
+
+        public async void StartInstallWatcher(Game game)
+        {
+            watcherToken = new CancellationTokenSource();
+
+            await Task.Run(async () =>
+            {
+                while (true)
+                {
+                    if (watcherToken.IsCancellationRequested)
+                    {
+                        return;
+                    }
+
+
+                    if (game.InstallDirectory == null)
+                    {
+                        await Task.Delay(10000);
+                        continue;
+                    }
+                    else
+                    {
+                        var installInfo = new GameInstallationData()
+                        {
+                            InstallDirectory = game.InstallDirectory
+                        };
+
+                        InvokeOnInstalled(new GameInstalledEventArgs(installInfo));
+                        return;
+                    }
+                }
+            });
         }
     }
 }

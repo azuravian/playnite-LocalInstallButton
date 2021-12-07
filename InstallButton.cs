@@ -295,10 +295,10 @@ namespace InstallButton
             List<Game> gameList = selection.ToList();
             Game selectedGame = gameList[0];
 
-            StartInstallWatcher(selectedGame);
+            StartInstallWatcher();
         }
 
-        public async void StartInstallWatcher(Game game)
+        public async void StartInstallWatcher()
         {
             watcherToken = new CancellationTokenSource();
 
@@ -312,7 +312,7 @@ namespace InstallButton
                     }
 
 
-                    if (game.InstallDirectory == null)
+                    if (Game.InstallDirectory == null)
                     {
                         await Task.Delay(10000);
                         continue;
@@ -321,7 +321,7 @@ namespace InstallButton
                     {
                         var installInfo = new GameInstallationData()
                         {
-                            InstallDirectory = game.InstallDirectory
+                            InstallDirectory = Game.InstallDirectory
                         };
 
                         InvokeOnInstalled(new GameInstalledEventArgs(installInfo));

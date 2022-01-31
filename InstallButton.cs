@@ -16,7 +16,7 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using System.Management.Automation;
 using System.Management;
-using Microsoft.WindowsAPICodePack.Dialogs;
+using API = Playnite.SDK.API;
 
 namespace InstallButton
 {
@@ -73,9 +73,6 @@ namespace InstallButton
         public void GameInstaller(Game game)
         {
             Game selectedGame = game;
-            CommonOpenFileDialog dialog = new CommonOpenFileDialog();
-            CommonOpenFileDialog dialog1 = new CommonOpenFileDialog();
-            CommonOpenFileDialog dialog2 = new CommonOpenFileDialog();
 
             string gameImagePath = null;
             string gameExe = null;
@@ -83,21 +80,12 @@ namespace InstallButton
             List<string> driveList2 = new List<string>();
             string command = null;
             string setupFile = null;
-            string driveLetter = null;
-
-            /*if (selection.Count() > 1)
-            {
-                PlayniteApi.Dialogs.ShowErrorMessage("Only one game can be installed at a time.", "Too Many Games Selected");
-                return;
-            }
-            List<Game> gameList = selection.ToList();
-            Game selectedGame = gameList[0];*/
-            
+            string driveLetter = null;            
             string PluginIdTest = new string(selectedGame.PluginId.ToString().Take(8).ToArray());
             
             if (PluginIdTest != "00000000")
             {
-                MessageBox.Show("This is a Library Controlled game.  Please use the standard install button.", "Library Controlled Game");
+                API.Instance.Dialogs.ShowErrorMessage("This is a Library Controlled game.  Please use the standard install button.", "Library Controlled Game");
                 return;
             }
             
@@ -118,11 +106,7 @@ namespace InstallButton
                 var response = MessageBox.Show("The installation path is empty.\nDo you want to specify the location of the installation media?", "No Installation Path", MessageBoxButton.YesNo);
                 if (response == MessageBoxResult.Yes)
                 {
-                    dialog1.IsFolderPicker = true;
-                    if (dialog1.ShowDialog() == CommonFileDialogResult.Ok)
-                    {
-                        gameImagePath = dialog.FileName;
-                    }
+                    gameImagePath = API.Instance.Dialogs.SelectFolder();
                 }
             }
             else
@@ -164,7 +148,7 @@ namespace InstallButton
                 {
                     if (!Directory.Exists(gameImagePath))
                     {
-                        MessageBox.Show("The file/folder specified in the installation path does not exist.", "Invalid Path");
+                        API.Instance.Dialogs.ShowErrorMessage("The file/folder specified in the installation path does not exist.", "Invalid Path");
                         return;
                     }
                     setupFile = Path.Combine(gameImagePath, "setup.exe");
@@ -181,11 +165,7 @@ namespace InstallButton
                             MessageBoxResult result = MessageBox.Show("More than 1 .exe in folder.  Would you like to select the appropriate .exe?", "Too many programs", MessageBoxButton.YesNo);
                             if (result == MessageBoxResult.Yes)
                             {
-                                dialog2.Filters.Add(new CommonFileDialogFilter("Installer", "exe"));
-                                if (dialog2.ShowDialog() == CommonFileDialogResult.Ok)
-                                {
-                                    command = dialog.FileName;
-                                }
+                                command = API.Instance.Dialogs.SelectFile("Installer|*.exe");
                             }
                             else
                             {
@@ -194,7 +174,7 @@ namespace InstallButton
                         }
                         else if (Files.Count().ToString() == "0")
                         {
-                            MessageBox.Show("No executables found in folder.  Check Rom Path.", "No Executables.");
+                            API.Instance.Dialogs.ShowErrorMessage("No executables found in folder.  Check Rom Path.", "No Executables.");
                             return;
                         }
                         else
@@ -242,12 +222,8 @@ namespace InstallButton
                 }
             }
 
-            dialog.Filters.Add(new CommonFileDialogFilter("Executables", "exe"));
-            if (dialog.ShowDialog() == CommonFileDialogResult.Ok)
-            {
-                gameExe = dialog.FileName;
-            }
-            
+            gameExe = API.Instance.Dialogs.SelectFile("Game Executable|*.exe");
+
             if (!String.IsNullOrEmpty(gameExe))
             {
                 GameAction action = new GameAction();
@@ -277,11 +253,12 @@ namespace InstallButton
                 catch (Exception ex)
                 {
                     logger.Error(ex.ToString());
-                    MessageBox.Show("There was an error creating the Game Action.  Please check the Playnite log for details.", "Action Failed");
+                    API.Instance.Dialogs.ShowErrorMessage("There was an error creating the Game Action.  Please check the Playnite log for details.", "Action Failed");
                     return;
                 }
                 selectedGame.IsInstalled = true;
                 selectedGame.InstallDirectory = Path.GetDirectoryName(gameExe);
+                API.Instance.Database.Games.Update(selectedGame);
             }
         }
     }

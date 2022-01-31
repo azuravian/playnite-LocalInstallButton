@@ -4,7 +4,7 @@
 library
 C#
 .cs
-I:\dev\Playnite\InstallButtonEdit\InstallButton\obj\Debug\
+I:\dev\Playnite\LocalInstallButton\obj\Debug\
 InstallButtonEdit
 none
 false
@@ -13,7 +13,7 @@ DEBUG;TRACE
 1-1519053708
 1849680314
 51660454675
-22109881568
+191433955146
 InstallButtonSettingsView.xaml;
 
 False

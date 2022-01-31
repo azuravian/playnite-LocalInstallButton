@@ -16,30 +16,29 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using System.Management.Automation;
 using System.Management;
+using Microsoft.WindowsAPICodePack.Dialogs;
 
 namespace InstallButton
 {
     public class InstallButton : GenericPlugin
     {
         private static readonly ILogger logger = LogManager.GetLogger();
-        
-        private InstallButtonSettings settings { get; set; }
 
         public override Guid Id { get; } = Guid.Parse("fd5887bb-2da2-4044-bea3-9896aea2f5b8");
 
         public InstallButton(IPlayniteAPI api) : base(api)
         {
-            settings = new InstallButtonSettings(this);
-
-            AddCustomElementSupport(new AddCustomElementSupportArgs
+            Properties = new GenericPluginProperties
             {
-                ElementList = new List<string> { "PluginButton" },
-                SourceName = "PluginButton"
-            });
+                HasSettings = false
+            };
         }
 
-        public override IEnumerable<TopPanelItem> GetTopPanelItems()
+        /*public override IEnumerable<TopPanelItem> GetTopPanelItems()
         {
+            api = new IPlayniteAPI api
+            
+            ;
             return new List<TopPanelItem>()
             {
                 new TopPanelItem
@@ -53,11 +52,11 @@ namespace InstallButton
                     Title = "Install Game",
                     Activated = () =>
                     {
-                        GameInstaller();
+                        GameInstaller( game);
                     }
                 }
             };
-        }
+        }*/
 
         public override IEnumerable<InstallController> GetInstallActions(GetInstallActionsArgs args)
         {
@@ -70,31 +69,35 @@ namespace InstallButton
             yield return new LocalInstallController(args.Game);
         }
 
-
-        public void GameInstaller()
+        
+        public void GameInstaller(Game game)
         {
-            IEnumerable<Game> selection = PlayniteApi.MainView.SelectedGames;
+            Game selectedGame = game;
+            CommonOpenFileDialog dialog = new CommonOpenFileDialog();
+            CommonOpenFileDialog dialog1 = new CommonOpenFileDialog();
+            CommonOpenFileDialog dialog2 = new CommonOpenFileDialog();
 
             string gameImagePath = null;
+            string gameExe = null;
             List<string> driveList = new List<string>();
             List<string> driveList2 = new List<string>();
             string command = null;
             string setupFile = null;
             string driveLetter = null;
 
-            if (selection.Count() > 1)
+            /*if (selection.Count() > 1)
             {
                 PlayniteApi.Dialogs.ShowErrorMessage("Only one game can be installed at a time.", "Too Many Games Selected");
                 return;
             }
             List<Game> gameList = selection.ToList();
-            Game selectedGame = gameList[0];
+            Game selectedGame = gameList[0];*/
             
             string PluginIdTest = new string(selectedGame.PluginId.ToString().Take(8).ToArray());
             
             if (PluginIdTest != "00000000")
             {
-                PlayniteApi.Dialogs.ShowErrorMessage("This is a Library Controlled game.  Please use the standard install button.", "Library Controlled Game");
+                MessageBox.Show("This is a Library Controlled game.  Please use the standard install button.", "Library Controlled Game");
                 return;
             }
             
@@ -112,10 +115,14 @@ namespace InstallButton
 
             if (String.IsNullOrEmpty(gameImagePath))
             {
-                var response = PlayniteApi.Dialogs.ShowMessage("The installation path is empty.\nDo you want to specify the location of the installation media?", "No Installation Path", MessageBoxButton.YesNo);
+                var response = MessageBox.Show("The installation path is empty.\nDo you want to specify the location of the installation media?", "No Installation Path", MessageBoxButton.YesNo);
                 if (response == MessageBoxResult.Yes)
                 {
-                    gameImagePath = PlayniteApi.Dialogs.SelectFolder();
+                    dialog1.IsFolderPicker = true;
+                    if (dialog1.ShowDialog() == CommonFileDialogResult.Ok)
+                    {
+                        gameImagePath = dialog.FileName;
+                    }
                 }
             }
             else
@@ -157,7 +164,7 @@ namespace InstallButton
                 {
                     if (!Directory.Exists(gameImagePath))
                     {
-                        PlayniteApi.Dialogs.ShowErrorMessage("The file/folder specified in the installation path does not exist.", "Invalid Path");
+                        MessageBox.Show("The file/folder specified in the installation path does not exist.", "Invalid Path");
                         return;
                     }
                     setupFile = Path.Combine(gameImagePath, "setup.exe");
@@ -171,10 +178,14 @@ namespace InstallButton
 
                         if (Files.Count() > 1)
                         {
-                            MessageBoxResult result = PlayniteApi.Dialogs.ShowMessage("More than 1 .exe in folder.  Would you like to select the appropriate .exe?", "Too many programs", MessageBoxButton.YesNo);
+                            MessageBoxResult result = MessageBox.Show("More than 1 .exe in folder.  Would you like to select the appropriate .exe?", "Too many programs", MessageBoxButton.YesNo);
                             if (result == MessageBoxResult.Yes)
                             {
-                                command = PlayniteApi.Dialogs.SelectFile("Installer|*.exe");
+                                dialog2.Filters.Add(new CommonFileDialogFilter("Installer", "exe"));
+                                if (dialog2.ShowDialog() == CommonFileDialogResult.Ok)
+                                {
+                                    command = dialog.FileName;
+                                }
                             }
                             else
                             {
@@ -183,7 +194,7 @@ namespace InstallButton
                         }
                         else if (Files.Count().ToString() == "0")
                         {
-                            PlayniteApi.Dialogs.ShowErrorMessage("No executables found in folder.  Check Rom Path.", "No Executables.");
+                            MessageBox.Show("No executables found in folder.  Check Rom Path.", "No Executables.");
                             return;
                         }
                         else
@@ -231,12 +242,15 @@ namespace InstallButton
                 }
             }
 
-            String gameExe = PlayniteApi.Dialogs.SelectFile("Game Executable|*.exe");
+            dialog.Filters.Add(new CommonFileDialogFilter("Executables", "exe"));
+            if (dialog.ShowDialog() == CommonFileDialogResult.Ok)
+            {
+                gameExe = dialog.FileName;
+            }
+            
             if (!String.IsNullOrEmpty(gameExe))
             {
                 GameAction action = new GameAction();
-                
-                
                 
                 try
                 {
@@ -263,72 +277,12 @@ namespace InstallButton
                 catch (Exception ex)
                 {
                     logger.Error(ex.ToString());
-                    PlayniteApi.Dialogs.ShowErrorMessage("There was an error creating the Game Action.  Please check the Playnite log for details.", "Action Failed");
+                    MessageBox.Show("There was an error creating the Game Action.  Please check the Playnite log for details.", "Action Failed");
                     return;
                 }
                 selectedGame.IsInstalled = true;
                 selectedGame.InstallDirectory = Path.GetDirectoryName(gameExe);
-                PlayniteApi.Database.Games.Update(selectedGame);
             }
-        }
-    }
-
-    public class LocalInstallController : InstallController
-    {
-        private CancellationTokenSource watcherToken;
-
-        public LocalInstallController(Game game) : base(game)
-        {
-            Name = "Install using InstallButton Plugin";
-        }
-
-        public IPlayniteAPI Api;
-
-        public override void Install(InstallActionArgs args)
-        {
-            Dispose();
-
-            InstallButton installButton = new InstallButton(Api);
-            installButton.GameInstaller();
-
-            IEnumerable<Game> selection = Api.MainView.SelectedGames;
-            List<Game> gameList = selection.ToList();
-            Game selectedGame = gameList[0];
-
-            StartInstallWatcher();
-        }
-
-        public async void StartInstallWatcher()
-        {
-            watcherToken = new CancellationTokenSource();
-
-            await Task.Run(async () =>
-            {
-                while (true)
-                {
-                    if (watcherToken.IsCancellationRequested)
-                    {
-                        return;
-                    }
-
-
-                    if (Game.InstallDirectory == null)
-                    {
-                        await Task.Delay(10000);
-                        continue;
-                    }
-                    else
-                    {
-                        var installInfo = new GameInstallationData()
-                        {
-                            InstallDirectory = Game.InstallDirectory
-                        };
-
-                        InvokeOnInstalled(new GameInstalledEventArgs(installInfo));
-                        return;
-                    }
-                }
-            });
         }
     }
 }

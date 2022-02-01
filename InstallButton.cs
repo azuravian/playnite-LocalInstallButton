@@ -190,7 +190,7 @@ namespace InstallButton
                 {
                     String dpath = "";
                     p.StartInfo.FileName = command;
-                    p.StartInfo.UseShellExecute = false;
+                    p.StartInfo.UseShellExecute = true;
                     if (driveLetter != null)
                     {
                         dpath = driveLetter;
@@ -204,6 +204,7 @@ namespace InstallButton
                         dpath = gameImagePath;
                     }
                     p.StartInfo.WorkingDirectory = dpath;
+                    p.StartInfo.Verb = "runas";
                     p.Start();
                     p.WaitForExit();
                 }

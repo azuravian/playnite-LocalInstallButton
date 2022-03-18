@@ -186,7 +186,15 @@ namespace InstallButton
             }
             if (!File.Exists(command))
             {
-                command = API.Instance.Dialogs.SelectFile("Installer|*.exe");
+                MessageBoxResult result = MessageBox.Show("Setup.exe was not found in your ISO.  Would you like to select the appropriate .exe?", "Setup.exe not found", MessageBoxButton.YesNo);
+                if (result == MessageBoxResult.Yes)
+                {
+                    command = API.Instance.Dialogs.SelectFile("Installer|*.exe");
+                }
+                else
+                {
+                    return;
+                }
             }
             try
             {

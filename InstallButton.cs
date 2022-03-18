@@ -184,6 +184,10 @@ namespace InstallButton
                     }
                 }
             }
+            if (!File.Exists(command))
+            {
+                command = API.Instance.Dialogs.SelectFile("Installer|*.exe");
+            }
             try
             {
                 using (Process p = new Process())

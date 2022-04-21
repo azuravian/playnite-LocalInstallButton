@@ -24,14 +24,26 @@ namespace InstallButton
     {
         private static readonly ILogger logger = LogManager.GetLogger();
 
+        public InstallButtonSettings Settings { get; set; }
+        
         public override Guid Id { get; } = Guid.Parse("fd5887bb-2da2-4044-bea3-9896aea2f5b8");
 
         public InstallButton(IPlayniteAPI api) : base(api)
         {
             Properties = new GenericPluginProperties
             {
-                HasSettings = false
+                HasSettings = true
             };
+        }
+
+        public override ISettings GetSettings(bool firstRunSettings)
+        {
+            return Settings ?? (Settings = new InstallButtonSettings(this));
+        }
+
+        public override UserControl GetSettingsView(bool firstRunSettings)
+        {
+            return new InstallButtonSettingsView();
         }
 
         /*public override IEnumerable<TopPanelItem> GetTopPanelItems()
@@ -75,26 +87,36 @@ namespace InstallButton
             Game selectedGame = game;
 
             string gameImagePath = null;
+            string gameInstallArgs = null;
+            string gameInstallDir = API.Instance.ExpandGameVariables(selectedGame, selectedGame.InstallDirectory);
             string gameExe = null;
             List<string> driveList = new List<string>();
             List<string> driveList2 = new List<string>();
             string command = null;
             string setupFile = null;
-            string driveLetter = null;            
-            string PluginIdTest = new string(selectedGame.PluginId.ToString().Take(8).ToArray());
+            string driveLetter = null;
             
-            if (PluginIdTest != "00000000")
-            {
-                API.Instance.Dialogs.ShowErrorMessage("This is a Library Controlled game.  Please use the standard install button.", "Library Controlled Game");
-                return;
-            }
-            
-
-
             try
             {
-                var gameRoms = selectedGame.Roms.ToList();
-                gameImagePath = gameRoms[0].Path;
+                if (Settings.UseActions == true)
+                {
+                    API.Instance.Dialogs.ShowErrorMessage("Use Actions Detected", "settings");
+                }
+                var gameActions = selectedGame.GameActions.ToList();
+                foreach (GameAction g in gameActions)
+                {
+                    if (g.Name == "Install")
+                    {
+                        gameImagePath = API.Instance.ExpandGameVariables(selectedGame, g).Path.Replace(": ", " - ");
+                        gameInstallArgs = API.Instance.ExpandGameVariables(selectedGame, g).Arguments.Replace(": ", " - ");
+                        API.Instance.Dialogs.ShowErrorMessage(gameImagePath + "\n " + gameInstallArgs, "Arguments");
+                    }
+                }
+                if (gameImagePath == null)
+                {
+                    var gameRoms = selectedGame.Roms.ToList();
+                    gameImagePath = gameRoms[0].Path;
+                }
             }
             catch (Exception ex)
             {
@@ -203,6 +225,10 @@ namespace InstallButton
                     String dpath = "";
                     p.StartInfo.FileName = command;
                     p.StartInfo.UseShellExecute = true;
+                    if (gameInstallArgs != null)
+                    {
+                        p.StartInfo.Arguments = gameInstallArgs;
+                    }
                     if (driveLetter != null)
                     {
                         dpath = driveLetter;

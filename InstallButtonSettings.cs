@@ -9,8 +9,10 @@ using Newtonsoft.Json;
 
 namespace InstallButton
 {
-    public class InstallButtonSettings
+    public class InstallButtonSettings : ObservableObject
     {
+        private bool useactions = false;
+        public bool UseActions { get => useactions; set => SetValue(ref useactions, value); }
         // Playnite serializes settings object to a JSON object and saves it as text file.
         // If you want to exclude some property from being saved then use `JsonDontSerialize` ignore attribute.
     }

@@ -79,10 +79,10 @@ namespace InstallButton
                 yield break;
             }
 
-            yield return new LocalInstallController(args.Game);
+            yield return new LocalInstallController(args.Game, this);
         }
 
-        
+
         public void GameInstaller(Game game)
         {
             Game selectedGame = game;
@@ -98,46 +98,45 @@ namespace InstallButton
             string setupFile = null;
             string driveLetter = null;
 
-            try
+            if (settings.Settings.UseActions)
             {
-                if (settings.Settings.UseActions == true)
+                try
                 {
-                    API.Instance.Dialogs.ShowErrorMessage("Use Actions Detected", "settings");
-                }
-                gameActions = selectedGame.GameActions.ToList();
-            }
-            catch (Exception ex)
-            {
-                logger.Error(ex.ToString());
-            }
-            try
-            {
-                foreach (GameAction g in gameActions)
-                {
-                    if (g.Name == "Install")
+                    gameActions = selectedGame.GameActions.ToList();
+                    try
                     {
-                        gameImagePath = API.Instance.ExpandGameVariables(selectedGame, g).Path.Replace(": ", " - ");
-                        gameInstallArgs = API.Instance.ExpandGameVariables(selectedGame, g).Arguments.Replace(": ", " - ");
-                        API.Instance.Dialogs.ShowErrorMessage(gameImagePath + "\n " + gameInstallArgs, "Arguments");
+                        foreach (GameAction g in gameActions)
+                        {
+                            if (g.Name == "Install")
+                            {
+                                gameImagePath = API.Instance.ExpandGameVariables(selectedGame, g).Path.Replace(": ", " - ");
+                                gameInstallArgs = API.Instance.ExpandGameVariables(selectedGame, g).Arguments.Replace(": ", " - ");
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.Error(ex.ToString());
                     }
                 }
-            }
-            catch (Exception ex)
-            {
-                logger.Error(ex.ToString());
-            }
-            try
-            {
-                if (gameImagePath == null)
+                catch (Exception ex)
                 {
-                    var gameRoms = selectedGame.Roms.ToList();
-                    gameImagePath = gameRoms[0].Path;
-                    API.Instance.Dialogs.ShowErrorMessage(gameImagePath + "\n ", "Arguments");
+                    logger.Error(ex.ToString());
                 }
             }
-            catch (Exception ex)
+            else
             {
-                logger.Error(ex.ToString());
+                try
+                {
+                    {
+                        var gameRoms = selectedGame.Roms.ToList();
+                        gameImagePath = gameRoms[0].Path;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    logger.Error(ex.ToString());
+                }
             }
 
             if (String.IsNullOrEmpty(gameImagePath))
@@ -278,7 +277,7 @@ namespace InstallButton
                 }
             }
 
-            gameExe = API.Instance.Dialogs.SelectFile("Game Executable|*.exe");
+            gameExe = API.Instance.Dialogs.SelectFile("Game Executable|*.exe").Replace(selectedGame.Name, "{Name}");
 
             if (!String.IsNullOrEmpty(gameExe))
             {
@@ -312,8 +311,24 @@ namespace InstallButton
                     API.Instance.Dialogs.ShowErrorMessage("There was an error creating the Game Action.  Please check the Playnite log for details.", "Action Failed");
                     return;
                 }
-                selectedGame.IsInstalled = true;
-                selectedGame.InstallDirectory = Path.GetDirectoryName(gameExe);
+                try
+                {
+                    gameActions = selectedGame.GameActions.ToList();
+                    foreach (GameAction g in gameActions)
+                    {
+                        if (g.Name == "Play")
+                        {
+                            selectedGame.IsInstalled = true;
+                            selectedGame.InstallDirectory = Path.GetDirectoryName(gameExe);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    logger.Error(ex.ToString());
+                    API.Instance.Dialogs.ShowErrorMessage("There was an error marking the game as installed.  Please check the Playnite log for details.", "Action Failed");
+                    return;
+                }
                 API.Instance.Database.Games.Update(selectedGame);
             }
         }

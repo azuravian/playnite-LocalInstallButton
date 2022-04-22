@@ -18,13 +18,13 @@ namespace InstallButton
     {
 
         private CancellationTokenSource watcherToken;
+        private InstallButton pluginInstance;
 
-        public LocalInstallController(Game game) : base(game)
+        public LocalInstallController(Game game, InstallButton instance) : base(game)
         {
             Name = "Install using InstallButton Plugin";
+            pluginInstance = instance;
         }
-
-        public IPlayniteAPI Api;
 
         public override void Dispose()
         {
@@ -33,9 +33,7 @@ namespace InstallButton
 
         public override void Install(InstallActionArgs args)
         {
-            InstallButton installButton = new InstallButton(Api);
-            installButton.GameInstaller(Game);
-
+            pluginInstance.GameInstaller(Game);
             StartInstallWatcher();
         }
 

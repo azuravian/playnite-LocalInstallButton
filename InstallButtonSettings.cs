@@ -9,21 +9,31 @@ using Newtonsoft.Json;
 
 namespace InstallButton
 {
-    public class InstallButtonSettings : ISettings
+    public class InstallButtonSettings : ObservableObject
     {
-        private readonly InstallButton plugin;
-
-        public bool UseActions { get; set; } = false;
-
+        private bool useactions = false;
+        public bool UseActions { get => useactions; set => SetValue(ref useactions, value); }
         // Playnite serializes settings object to a JSON object and saves it as text file.
         // If you want to exclude some property from being saved then use `JsonDontSerialize` ignore attribute.
+    }
 
-        // Parameterless constructor must exist if you want to use LoadPluginSettings method.
-        public InstallButtonSettings()
+    public class InstallButtonSettingsViewModel : ObservableObject, ISettings
+    {
+        private readonly InstallButton plugin;
+        private InstallButtonSettings editingClone { get; set; }
+
+        private InstallButtonSettings settings;
+        public InstallButtonSettings Settings
         {
+            get => settings;
+            set
+            {
+                settings = value;
+                OnPropertyChanged();
+            }
         }
-        
-        public InstallButtonSettings(InstallButton plugin)
+
+        public InstallButtonSettingsViewModel(InstallButton plugin)
         {
             // Injecting your plugin instance is required for Save/Load method because Playnite saves data to a location based on what plugin requested the operation.
             this.plugin = plugin;
@@ -34,26 +44,32 @@ namespace InstallButton
             // LoadPluginSettings returns null if not saved data is available.
             if (savedSettings != null)
             {
-                UseActions = savedSettings.UseActions;                
+                Settings = savedSettings;
+            }
+            else
+            {
+                Settings = new InstallButtonSettings();
             }
         }
 
         public void BeginEdit()
         {
             // Code executed when settings view is opened and user starts editing values.
+            editingClone = Serialization.GetClone(Settings);
         }
 
         public void CancelEdit()
         {
             // Code executed when user decides to cancel any changes made since BeginEdit was called.
             // This method should revert any changes made to Option1 and Option2.
+            Settings = editingClone;
         }
 
         public void EndEdit()
         {
             // Code executed when user decides to confirm changes made since BeginEdit was called.
             // This method should save settings made to Option1 and Option2.
-            plugin.SavePluginSettings(this);
+            plugin.SavePluginSettings(Settings);
         }
 
         public bool VerifySettings(out List<string> errors)

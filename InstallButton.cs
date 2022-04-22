@@ -24,12 +24,13 @@ namespace InstallButton
     {
         private static readonly ILogger logger = LogManager.GetLogger();
 
-        public InstallButtonSettings Settings { get; set; }
+        public InstallButtonSettingsViewModel settings { get; set; }
         
         public override Guid Id { get; } = Guid.Parse("fd5887bb-2da2-4044-bea3-9896aea2f5b8");
 
         public InstallButton(IPlayniteAPI api) : base(api)
         {
+            settings = new InstallButtonSettingsViewModel(this);
             Properties = new GenericPluginProperties
             {
                 HasSettings = true
@@ -38,7 +39,7 @@ namespace InstallButton
 
         public override ISettings GetSettings(bool firstRunSettings)
         {
-            return Settings ?? (Settings = new InstallButtonSettings(this));
+            return settings;
         }
 
         public override UserControl GetSettingsView(bool firstRunSettings)
@@ -90,19 +91,27 @@ namespace InstallButton
             string gameInstallArgs = null;
             string gameInstallDir = API.Instance.ExpandGameVariables(selectedGame, selectedGame.InstallDirectory);
             string gameExe = null;
+            List<GameAction> gameActions = null;
             List<string> driveList = new List<string>();
             List<string> driveList2 = new List<string>();
             string command = null;
             string setupFile = null;
             string driveLetter = null;
-            
+
             try
             {
-                if (Settings.UseActions == true)
+                if (settings.Settings.UseActions == true)
                 {
                     API.Instance.Dialogs.ShowErrorMessage("Use Actions Detected", "settings");
                 }
-                var gameActions = selectedGame.GameActions.ToList();
+                gameActions = selectedGame.GameActions.ToList();
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex.ToString());
+            }
+            try
+            {
                 foreach (GameAction g in gameActions)
                 {
                     if (g.Name == "Install")
@@ -112,10 +121,18 @@ namespace InstallButton
                         API.Instance.Dialogs.ShowErrorMessage(gameImagePath + "\n " + gameInstallArgs, "Arguments");
                     }
                 }
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex.ToString());
+            }
+            try
+            {
                 if (gameImagePath == null)
                 {
                     var gameRoms = selectedGame.Roms.ToList();
                     gameImagePath = gameRoms[0].Path;
+                    API.Instance.Dialogs.ShowErrorMessage(gameImagePath + "\n ", "Arguments");
                 }
             }
             catch (Exception ex)

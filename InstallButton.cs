@@ -25,7 +25,7 @@ namespace InstallButton
         private static readonly ILogger logger = LogManager.GetLogger();
 
         public InstallButtonSettingsViewModel settings { get; set; }
-        
+
         public override Guid Id { get; } = Guid.Parse("fd5887bb-2da2-4044-bea3-9896aea2f5b8");
 
         public InstallButton(IPlayniteAPI api) : base(api)
@@ -83,6 +83,65 @@ namespace InstallButton
         }
 
 
+        public void GameSelect(Game selectedGame)
+        {
+            string gameInstallDir = API.Instance.ExpandGameVariables(selectedGame, selectedGame.InstallDirectory);
+            string gameExe = API.Instance.Dialogs.SelectFile("Game Executable|*.exe").Replace(selectedGame.Name, "{Name}");
+
+            if (!String.IsNullOrEmpty(gameExe))
+            {
+                GameAction action = new GameAction();
+
+                try
+                {
+                    action.Type = GameActionType.File;
+                }
+                catch (Exception ex)
+                {
+                    logger.Error(ex.ToString());
+                }
+                action.Path = Path.GetFileName(gameExe);
+                action.WorkingDir = "{InstallDir}";
+                action.Name = "Play";
+                action.TrackingMode = TrackingMode.Default;
+                action.IsPlayAction = true;
+
+                if (selectedGame.GameActions == null)
+                {
+                    selectedGame.GameActions = new System.Collections.ObjectModel.ObservableCollection<GameAction>();
+                }
+                try
+                {
+                    selectedGame.GameActions.AddMissing(action);
+                }
+                catch (Exception ex)
+                {
+                    logger.Error(ex.ToString());
+                    API.Instance.Dialogs.ShowErrorMessage("There was an error creating the Game Action.  Please check the Playnite log for details.", "Action Failed");
+                    return;
+                }
+                try
+                {
+                    List<GameAction> gameActions = selectedGame.GameActions.ToList();
+                    foreach (GameAction g in gameActions)
+                    {
+                        if (g.Name == "Play")
+                        {
+                            selectedGame.IsInstalled = true;
+                            selectedGame.InstallDirectory = Path.GetDirectoryName(gameExe);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    logger.Error(ex.ToString());
+                    API.Instance.Dialogs.ShowErrorMessage("There was an error marking the game as installed.  Please check the Playnite log for details.", "Action Failed");
+                    return;
+                }
+                API.Instance.Database.Games.Update(selectedGame);
+            }
+        }
+        
         public void GameInstaller(Game game)
         {
             Game selectedGame = game;
@@ -90,7 +149,6 @@ namespace InstallButton
             string gameImagePath = null;
             string gameInstallArgs = null;
             string gameInstallDir = API.Instance.ExpandGameVariables(selectedGame, selectedGame.InstallDirectory);
-            string gameExe = null;
             List<GameAction> gameActions = null;
             List<string> driveList = new List<string>();
             List<string> driveList2 = new List<string>();
@@ -231,7 +289,7 @@ namespace InstallButton
                 }
                 else
                 {
-                    return;
+                    GameSelect(selectedGame);
                 }
             }
             try
@@ -277,60 +335,7 @@ namespace InstallButton
                 }
             }
 
-            gameExe = API.Instance.Dialogs.SelectFile("Game Executable|*.exe").Replace(selectedGame.Name, "{Name}");
-
-            if (!String.IsNullOrEmpty(gameExe))
-            {
-                GameAction action = new GameAction();
-                
-                try
-                {
-                    action.Type = GameActionType.File;
-                }
-                catch (Exception ex)
-                {
-                    logger.Error(ex.ToString());
-                }
-                action.Path = Path.GetFileName(gameExe);
-                action.WorkingDir = "{InstallDir}";
-                action.Name = "Play";
-                action.TrackingMode = TrackingMode.Default;
-                action.IsPlayAction = true;
-                
-                if (selectedGame.GameActions == null)
-                {
-                    selectedGame.GameActions = new System.Collections.ObjectModel.ObservableCollection<GameAction>();                    
-                }
-                try
-                {
-                    selectedGame.GameActions.AddMissing(action);
-                }
-                catch (Exception ex)
-                {
-                    logger.Error(ex.ToString());
-                    API.Instance.Dialogs.ShowErrorMessage("There was an error creating the Game Action.  Please check the Playnite log for details.", "Action Failed");
-                    return;
-                }
-                try
-                {
-                    gameActions = selectedGame.GameActions.ToList();
-                    foreach (GameAction g in gameActions)
-                    {
-                        if (g.Name == "Play")
-                        {
-                            selectedGame.IsInstalled = true;
-                            selectedGame.InstallDirectory = Path.GetDirectoryName(gameExe);
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    logger.Error(ex.ToString());
-                    API.Instance.Dialogs.ShowErrorMessage("There was an error marking the game as installed.  Please check the Playnite log for details.", "Action Failed");
-                    return;
-                }
-                API.Instance.Database.Games.Update(selectedGame);
-            }
+            GameSelect(selectedGame);
         }
     }
 }

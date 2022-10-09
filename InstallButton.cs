@@ -47,34 +47,10 @@ namespace InstallButton
             return new InstallButtonSettingsView();
         }
 
-        /*public override IEnumerable<TopPanelItem> GetTopPanelItems()
-        {
-            api = new IPlayniteAPI api
-            
-            ;
-            return new List<TopPanelItem>()
-            {
-                new TopPanelItem
-                {
-                    Icon = new TextBlock
-                    {
-                        Text = "\uEF04",
-                        FontSize = 22,
-                        FontFamily = ResourceProvider.GetResource("FontIcoFont") as FontFamily
-                    },
-                    Title = "Install Game",
-                    Activated = () =>
-                    {
-                        GameInstaller( game);
-                    }
-                }
-            };
-        }*/
 
         public override IEnumerable<InstallController> GetInstallActions(GetInstallActionsArgs args)
         {
-            string PluginIdTest = new string(args.Game.PluginId.ToString().Take(8).ToArray());
-            if (PluginIdTest != "00000000")
+            if (args.Game.PluginId != Guid.Empty)
             {
                 yield break;
             }
@@ -85,7 +61,6 @@ namespace InstallButton
 
         public void GameSelect(Game selectedGame)
         {
-            string gameInstallDir = API.Instance.ExpandGameVariables(selectedGame, selectedGame.InstallDirectory);
             string gameExe = API.Instance.Dialogs.SelectFile("Game Executable|*.exe").Replace(selectedGame.Name, "{Name}");
 
             if (!String.IsNullOrEmpty(gameExe))
@@ -148,19 +123,16 @@ namespace InstallButton
 
             string gameImagePath = null;
             string gameInstallArgs = null;
-            string gameInstallDir = API.Instance.ExpandGameVariables(selectedGame, selectedGame.InstallDirectory);
-            List<GameAction> gameActions = null;
             List<string> driveList = new List<string>();
             List<string> driveList2 = new List<string>();
             string command = null;
-            string setupFile = null;
             string driveLetter = null;
 
             if (settings.Settings.UseActions)
             {
                 try
                 {
-                    gameActions = selectedGame.GameActions.ToList();
+                    List<GameAction> gameActions = selectedGame.GameActions.ToList();
                     try
                     {
                         foreach (GameAction g in gameActions)
@@ -247,7 +219,7 @@ namespace InstallButton
                         API.Instance.Dialogs.ShowErrorMessage("The file/folder specified in the installation path does not exist.", "Invalid Path");
                         return;
                     }
-                    setupFile = Path.Combine(gameImagePath, "setup.exe");
+                    string setupFile = Path.Combine(gameImagePath, "setup.exe");
                     if (File.Exists(setupFile))
                     {
                         command = setupFile;

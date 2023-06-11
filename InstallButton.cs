@@ -251,6 +251,11 @@ namespace InstallButton
                         }
                     }
                 }
+                else
+                {
+                    API.Instance.Dialogs.ShowErrorMessage("The provided Rom file has an invalid extension. Please provide valid iso/exe/directory.", "Invalid Executable/ISO.");
+                    return;
+                }
             }
             if (!File.Exists(command))
             {

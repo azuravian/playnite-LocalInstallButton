@@ -179,7 +179,7 @@ namespace InstallButton
             }
             else
             {
-                if (Path.GetFileName(gameImagePath).EndsWith(".iso"))
+                if (Path.GetFileName(gameImagePath).EndsWith(".iso") || Path.GetFileName(gameImagePath).EndsWith(".ISO"))
                 {
                     foreach (var drive in DriveInfo.GetDrives())
                     {

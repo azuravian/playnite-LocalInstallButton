@@ -234,7 +234,7 @@ namespace InstallButton
             }
             else
             {
-                if (Path.GetFileName(gameImagePath).EndsWith(".iso"))
+                if (Path.GetFileName(gameImagePath).EndsWith(".iso") || Path.GetFileName(gameImagePath).EndsWith(".ISO"))
                 {
                     foreach (var drive in DriveInfo.GetDrives())
                     {
@@ -305,6 +305,11 @@ namespace InstallButton
                             command = Files[0];
                         }
                     }
+                }
+                else
+                {
+                    API.Instance.Dialogs.ShowErrorMessage("The provided Rom file has an invalid extension. Please provide valid iso/exe/directory.", "Invalid Executable/ISO.");
+                    return;
                 }
             }
             if (!File.Exists(command))

@@ -58,6 +58,16 @@ namespace InstallButton
             yield return new LocalInstallController(args.Game, this);
         }
 
+        public override IEnumerable<UninstallController> GetUninstallActions(GetUninstallActionsArgs args)
+        {
+            if (args.Game.PluginId != Guid.Empty)
+            {
+                yield break;
+            }
+
+            yield return new LocalUninstallController(args.Game, this);
+        }
+
 
         public void GameSelect(Game selectedGame)
         {
@@ -66,10 +76,42 @@ namespace InstallButton
             if (!String.IsNullOrEmpty(gameExe))
             {
                 GameAction action = new GameAction();
+                GameAction uaction = new GameAction();
+                string installDir = Path.GetDirectoryName(gameExe);
+                string[] idFiles = Directory.GetFiles(installDir, "*unins*", SearchOption.AllDirectories);
+                string finalu = "";
+
+                foreach (string idFile in idFiles)
+                {
+                    if (idFile.ToLower().Contains("uninstall.bat"))
+                    {
+                        finalu = idFile;
+                        break;
+                    }
+                    else if (idFile.ToLower().Contains("uninstall.exe"))
+                    {
+                        finalu = idFile;
+                        break;
+                    }
+                    else if (idFile.ToLower().Contains("unins000.exe"))
+                    {
+                        finalu = idFile;
+                        break;
+                    }
+                }
+
+                if (finalu == "")
+                {
+                    finalu = API.Instance.Dialogs.SelectFile("Uninstall Executable|*.exe");
+                }
 
                 try
                 {
                     action.Type = GameActionType.File;
+                    if (finalu != "")
+                    {
+                        uaction.Type = GameActionType.File;
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -81,6 +123,14 @@ namespace InstallButton
                 action.TrackingMode = TrackingMode.Default;
                 action.IsPlayAction = true;
 
+                if (finalu != "")
+                {
+                    uaction.Path = Path.GetFileName(finalu);
+                    uaction.WorkingDir = Path.GetDirectoryName(finalu);
+                    uaction.Name = "Uninstall";
+                    uaction.IsPlayAction = false;
+                }
+
                 if (selectedGame.GameActions == null)
                 {
                     selectedGame.GameActions = new System.Collections.ObjectModel.ObservableCollection<GameAction>();
@@ -88,6 +138,10 @@ namespace InstallButton
                 try
                 {
                     selectedGame.GameActions.AddMissing(action);
+                    if (finalu != "")
+                    {
+                        selectedGame.GameActions.AddMissing(uaction);
+                    }   
                 }
                 catch (Exception ex)
                 {
@@ -115,6 +169,7 @@ namespace InstallButton
                 }
                 API.Instance.Database.Games.Update(selectedGame);
             }
+            this.Dispose();
         }
         
         public void GameInstaller(Game game)
@@ -309,5 +364,16 @@ namespace InstallButton
 
             GameSelect(selectedGame);
         }
+
+        public void GameUninstaller(Game game)
+        {
+            Game selectedGame = game;
+            if (selectedGame != null)
+            {
+                string installDir = selectedGame.InstallDirectory;
+
+            }
+        }
+
     }
 }

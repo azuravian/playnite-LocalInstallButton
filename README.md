@@ -1,3 +1,6 @@
+# notice
+This project has been archived.  The funtionality of this plugin was superceded a long time ago by my extension at https://github.com/azuravian/playnite-LocalLibrary
+
 # playnite-LocalInstallButton
 Adds button to assist with installing local PC games.
 
